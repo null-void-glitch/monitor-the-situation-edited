@@ -9,6 +9,6 @@ type HubBroadcaster struct {
 	Hub *Hub
 }
 
-func (b HubBroadcaster) Broadcast(topic string, payload []byte) {
-	b.Hub.Broadcast(events.Topic(topic), payload)
+func (b HubBroadcaster) Broadcast(topic string, payload []byte, traceparent string) {
+	b.Hub.Broadcast(events.Topic(topic), payload, traceparent)
 }

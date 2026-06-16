@@ -20,6 +20,10 @@ interface UIStore {
   aboutOpen: boolean
   openAbout: () => void
   closeAbout: () => void
+
+  devtoolsOpen: boolean
+  toggleDevtools: () => void
+  setDevtoolsOpen: (on: boolean) => void
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -35,4 +39,8 @@ export const useUIStore = create<UIStore>((set) => ({
   aboutOpen: false,
   openAbout: () => set({ aboutOpen: true }),
   closeAbout: () => set({ aboutOpen: false }),
+
+  devtoolsOpen: false,
+  toggleDevtools: () => set((s) => ({ devtoolsOpen: !s.devtoolsOpen })),
+  setDevtoolsOpen: (on) => set({ devtoolsOpen: on }),
 }))

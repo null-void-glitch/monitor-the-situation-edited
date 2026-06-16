@@ -56,6 +56,7 @@ type Victim struct {
 	Activity    string    `json:"activity"`
 	Website     string    `json:"website"`
 	Description string    `json:"description"`
+	Techniques  []string  `json:"techniques,omitempty"`
 }
 
 func (v Victim) ID() string {

@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/sync/errgroup"
 
@@ -31,14 +33,17 @@ import (
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/iss"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/kev"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/ransomware"
+	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/rss"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/state"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/swpc"
+	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/tor"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/usgs"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/wikipedia"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/config"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/core"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/enrich/abuseipdb"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/enrich/greynoise"
+	"github.com/carterperez-dev/monitor-the-situation/backend/internal/enrich/ipapi"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/health"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/intel"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/middleware"
@@ -76,6 +81,8 @@ func (a abuseipdbEnricher) Lookup(
 type compositeDshieldEnricher struct {
 	abuse *abuseipdb.Client
 	gn    *greynoise.Cached
+	ipapi *ipapi.Client
+	redis *redis.Client
 }
 
 func (c compositeDshieldEnricher) Lookup(
@@ -92,6 +99,20 @@ func (c compositeDshieldEnricher) Lookup(
 		if v, err := c.gn.Lookup(ctx, ip); err == nil {
 			out.Classification = v.Classification
 			out.Actor = v.Name
+		}
+	}
+	if c.ipapi != nil {
+		if v, err := c.ipapi.Lookup(ctx, ip); err == nil {
+			out.Lat = &v.Lat
+			out.Lng = &v.Lon
+			if out.Country == "" {
+				out.Country = v.CountryCode
+			}
+		}
+	}
+	if c.redis != nil {
+		if isTor, err := c.redis.SIsMember(ctx, "tor_exits", ip).Result(); err == nil {
+			out.IsTor = isTor
 		}
 	}
 	return out, nil
@@ -359,6 +380,8 @@ func run(configPath string) error {
 			dsEnricher = compositeDshieldEnricher{
 				abuse: abuseClient,
 				gn:    gnCached,
+				ipapi: ipapi.NewClient(ipapi.ClientConfig{}),
+				redis: redis.Client,
 			}
 		}
 		coll := dshield.NewCollector(dshield.CollectorConfig{
@@ -432,12 +455,13 @@ func run(configPath string) error {
 
 	if cfg.Collectors.Ransomware.Enabled {
 		coll := ransomware.NewCollector(ransomware.CollectorConfig{
-			Interval: cfg.Collectors.Ransomware.Interval,
-			Fetcher:  ransomware.NewClient(ransomware.ClientConfig{}),
-			Repo:     ransomware.NewRepo(db.DB),
-			Emitter:  eventBus,
-			State:    collectorState,
-			Logger:   logger.With("collector", "ransomware"),
+			Interval:   cfg.Collectors.Ransomware.Interval,
+			Fetcher:    ransomware.NewClient(ransomware.ClientConfig{}),
+			Repo:       ransomware.NewRepo(db.DB),
+			Emitter:    eventBus,
+			State:      collectorState,
+			BtcTracker: ransomware.NewBitcoinTracker(redis.Client),
+			Logger:     logger.With("collector", "ransomware"),
 		})
 		collectorGroup.Go(func() error { return coll.Run(collectorCtx) })
 	}
@@ -484,6 +508,8 @@ func run(configPath string) error {
 		collectorGroup.Go(func() error { return coll.Run(collectorCtx) })
 	}
 
+	newsTrigger := make(chan struct{})
+
 	if cfg.Collectors.Wikipedia.Enabled {
 		coll := wikipedia.NewCollector(wikipedia.CollectorConfig{
 			Interval: cfg.Collectors.Wikipedia.Interval,
@@ -492,6 +518,7 @@ func run(configPath string) error {
 			Emitter:  eventBus,
 			State:    collectorState,
 			Logger:   logger.With("collector", "wikipedia"),
+			Trigger:  newsTrigger,
 		})
 		collectorGroup.Go(func() error { return coll.Run(collectorCtx) })
 	}
@@ -521,6 +548,29 @@ func run(configPath string) error {
 		collectorGroup.Go(func() error { return coll.Run(collectorCtx) })
 	}
 
+	if cfg.Collectors.RSS.Enabled {
+		coll := rss.NewCollector(rss.CollectorConfig{
+			Interval: cfg.Collectors.RSS.Interval,
+			Feeds:    cfg.Collectors.RSS.Feeds,
+			Fetcher:  rss.NewClient(),
+			Emitter:  eventBus,
+			State:    collectorState,
+			Logger:   logger.With("collector", "rss"),
+			Trigger:  newsTrigger,
+		})
+		collectorGroup.Go(func() error { return coll.Run(collectorCtx) })
+	}
+
+	if cfg.Collectors.Tor.Enabled {
+		coll := tor.NewCollector(tor.CollectorConfig{
+			Interval: cfg.Collectors.Tor.Interval,
+			URL:      cfg.Collectors.Tor.URL,
+			Redis:    redis.Client,
+			Logger:   logger.With("collector", "tor"),
+		})
+		collectorGroup.Go(func() error { return coll.Run(collectorCtx) })
+	}
+
 	logger.Info("collectors started",
 		"heartbeat", true,
 		"dshield", cfg.Collectors.DShield.Enabled,
@@ -534,6 +584,8 @@ func run(configPath string) error {
 		"wikipedia", cfg.Collectors.Wikipedia.Enabled,
 		"gdelt", cfg.Collectors.GDELT.Enabled,
 		"iss", cfg.Collectors.ISS.Enabled,
+		"rss", cfg.Collectors.RSS.Enabled,
+		"tor", cfg.Collectors.Tor.Enabled,
 	)
 
 	srv := server.New(server.Config{
@@ -573,6 +625,14 @@ func run(configPath string) error {
 
 		r.Get("/snapshot", snapHandler.ServeHTTP)
 		r.Get("/ws", wsHandler.ServeHTTP)
+		
+		r.Post("/news/refresh", func(w http.ResponseWriter, r *http.Request) {
+			select {
+			case newsTrigger <- struct{}{}:
+			default:
+			}
+			w.WriteHeader(http.StatusAccepted)
+		})
 
 		intelHandler.RegisterRoutes(r)
 

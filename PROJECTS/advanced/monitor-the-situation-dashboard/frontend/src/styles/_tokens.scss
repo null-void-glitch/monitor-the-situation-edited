@@ -231,6 +231,10 @@ $container-full: 100%;
   --accent-btc:        #f7931a;  // bitcoin orange
   --accent-eth:        #8b9eff;  // ethereum periwinkle
 
+  // Globe country outlines (three.js globe — read in JS via getComputedStyle,
+  // not applied by CSS). Themed in _themes.scss.
+  --globe-outline: #404040;
+
   // Layout — fixed panel column width (spec §11.1)
   --col-panel-width: 320px;
 }

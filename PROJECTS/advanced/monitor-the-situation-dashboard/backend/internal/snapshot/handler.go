@@ -4,8 +4,10 @@
 package snapshot
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/carterperez-dev/monitor-the-situation/backend/internal/collectors/ransomware"
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/core"
 )
 
@@ -21,6 +23,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		core.InternalServerError(w, err)
 		return
 	}
+
+	if rwPayload, ok := all["ransomware_victim"]; ok && len(rwPayload) > 0 {
+		var payload map[string]any
+		if err := json.Unmarshal(rwPayload, &payload); err == nil {
+			if groupName, ok := payload["group_name"].(string); ok {
+				if techs, ok := ransomware.GetTactics(groupName); ok {
+					payload["techniques"] = techs
+					if enriched, err := json.Marshal(payload); err == nil {
+						all["ransomware_victim"] = enriched
+					}
+				}
+			}
+		}
+	}
+
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	core.OK(w, all)
 }

@@ -31,7 +31,7 @@ type Repository interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -46,6 +46,7 @@ type CollectorConfig struct {
 	Emitter  Emitter
 	State    StateRecorder
 	Logger   *slog.Logger
+	Trigger  <-chan struct{}
 }
 
 type Collector struct {
@@ -75,6 +76,8 @@ func (c *Collector) Run(ctx context.Context) error {
 			return ctx.Err()
 		case <-ticker.C:
 			c.tick(ctx)
+		case <-c.cfg.Trigger:
+			c.tick(ctx)
 		}
 	}
 }
@@ -100,7 +103,8 @@ func (c *Collector) tick(ctx context.Context) {
 
 	entries := ParseEntries(resp.HTML)
 	now := time.Now().UTC()
-	emitted := int64(0)
+	var batch []map[string]any
+
 	for _, e := range entries {
 		id := entryID(e)
 		body, _ := json.Marshal(map[string]any{
@@ -117,19 +121,28 @@ func (c *Collector) tick(ctx context.Context) {
 			c.logger.Warn("wikipedia insert", "id", id, "err", err)
 			continue
 		}
-		c.cfg.Emitter.Emit(events.Event{
+		batch = append(batch, map[string]any{
+			"text": e.Text,
+			"slug": e.ArticleSlug,
+		})
+	}
+
+	if len(batch) > 0 {
+		body, _ := json.Marshal(batch)
+		c.cfg.Emitter.Emit(ctx, events.Event{
 			Topic:     events.TopicWikipediaITN,
 			Timestamp: now,
 			Source:    Name,
 			Payload:   json.RawMessage(body),
 		})
-		emitted++
+		c.cfg.State.RecordSuccess(ctx, Name, int64(len(batch)))
+	} else {
+		c.cfg.State.RecordSuccess(ctx, Name, 0)
 	}
 
 	if err := c.cfg.Repo.RememberRevID(ctx, resp.RevID); err != nil {
 		c.logger.Warn("wikipedia remember revid", "err", err)
 	}
-	c.cfg.State.RecordSuccess(ctx, Name, emitted)
 }
 
 func entryID(e ITNEntry) string {

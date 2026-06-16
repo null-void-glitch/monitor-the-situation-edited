@@ -32,7 +32,7 @@ type Repository interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -155,7 +155,7 @@ func (c *Collector) tick(ctx context.Context) {
 			if !inserted {
 				continue
 			}
-			c.cfg.Emitter.Emit(events.Event{
+			c.cfg.Emitter.Emit(ctx, events.Event{
 				Topic:     events.TopicGDELTSpike,
 				Timestamp: b.Time,
 				Source:    Name,

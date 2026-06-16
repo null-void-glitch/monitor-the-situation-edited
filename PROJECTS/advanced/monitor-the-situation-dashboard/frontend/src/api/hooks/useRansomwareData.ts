@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { isValidRansomwareVictim, type RansomwareVictim } from '@/api/types'
 import { API_ENDPOINTS, QUERY_KEYS } from '@/config'
 import { apiClient } from '@/core/api'
+import { pushRansomwarePoint } from '@/pages/dashboard/lifecycle'
 import { useRansomwareStore } from '@/stores/ransomware'
 
 interface RansomwareData {
@@ -35,7 +36,10 @@ export function useRansomwareData(): RansomwareData {
 
   useEffect(() => {
     if (!data) return
-    for (const ev of data) push(ev)
+    for (const ev of data) {
+      push(ev)
+      pushRansomwarePoint(ev)
+    }
   }, [data, push])
 
   return { items }

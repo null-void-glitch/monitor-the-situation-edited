@@ -9,7 +9,7 @@ import { Panel } from './Panel'
 
 const QUAKE_ROW_LIMIT = 8
 const FLASH_DURATION_MS = 600
-const STALE_AFTER_MS = 600_000
+const STALE_AFTER_MS = 86_400_000 // 24h
 const MS_PER_HOUR = 3_600_000
 const MS_PER_MINUTE = 60_000
 const HOURS_PER_DAY = 24

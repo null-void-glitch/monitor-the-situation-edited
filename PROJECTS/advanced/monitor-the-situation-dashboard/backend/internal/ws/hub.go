@@ -83,8 +83,8 @@ func NewHub(cfg HubConfig) *Hub {
 	}
 }
 
-func (h *Hub) Broadcast(topic events.Topic, payload []byte) {
-	env, err := EncodeEnvelope(string(topic), payload)
+func (h *Hub) Broadcast(topic events.Topic, payload []byte, traceparent string) {
+	env, err := EncodeEnvelope(string(topic), payload, traceparent)
 	if err != nil {
 		h.logger.Error("encode envelope", "err", err, "topic", topic)
 		return

@@ -184,11 +184,19 @@ func (r *Repo) RecentHijacks(
 	}
 	var rows []HijackRow
 	err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, detected_at, started_at, duration_sec, confidence, hijacker_asn,
-		       victim_asns, payload
-		  FROM bgp_hijack_events
-		 ORDER BY detected_at DESC
-		 LIMIT $1`, limit)
+		SELECT * FROM (
+			(SELECT id, detected_at, started_at, duration_sec, confidence, hijacker_asn, victim_asns, payload
+			   FROM bgp_hijack_events
+			  ORDER BY detected_at DESC
+			  LIMIT $1)
+			UNION
+			(SELECT id, detected_at, started_at, duration_sec, confidence, hijacker_asn, victim_asns, payload
+			   FROM bgp_hijack_events
+			  WHERE confidence >= 8
+			  ORDER BY detected_at DESC
+			  LIMIT $1)
+		) sub
+		ORDER BY detected_at DESC`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("recent hijacks: %w", err)
 	}

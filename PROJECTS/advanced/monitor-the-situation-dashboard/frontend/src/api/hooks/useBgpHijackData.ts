@@ -8,11 +8,13 @@ import { API_ENDPOINTS, QUERY_KEYS } from '@/config'
 import { apiClient } from '@/core/api'
 import { useBgpHijackStore } from '@/stores/bgpHijack'
 
+import { pushHijackPoint } from '@/pages/dashboard/lifecycle'
+
 interface BgpHijackData {
   items: BgpHijack[]
 }
 
-const INTEL_LIMIT = 100
+const INTEL_LIMIT = 500
 const STALE_MS = 60_000
 
 const fetchRecentHijacks = async (): Promise<BgpHijack[]> => {
@@ -35,7 +37,10 @@ export function useBgpHijackData(): BgpHijackData {
 
   useEffect(() => {
     if (!data) return
-    for (const ev of data) push(ev)
+    for (const ev of data) {
+      push(ev)
+      pushHijackPoint(ev)
+    }
   }, [data, push])
 
   return { items }

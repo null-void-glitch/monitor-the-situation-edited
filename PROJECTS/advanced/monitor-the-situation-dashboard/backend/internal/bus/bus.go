@@ -10,6 +10,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/events"
 )
 
@@ -53,7 +56,11 @@ func New(cfg Config) *Bus {
 	}
 }
 
-func (b *Bus) Emit(ev events.Event) {
+func (b *Bus) Emit(ctx context.Context, ev events.Event) {
+	carrier := propagation.MapCarrier{}
+	otel.GetTextMapPropagator().Inject(ctx, carrier)
+	ev.Traceparent = carrier["traceparent"]
+
 	select {
 	case b.ch <- ev:
 	default:
@@ -105,7 +112,7 @@ func (b *Bus) Run(ctx context.Context) error {
 						"err", err, "topic", ev.Topic)
 					continue
 				}
-				b.broadcaster.Broadcast(string(ev.Topic), payload)
+				b.broadcaster.Broadcast(string(ev.Topic), payload, ev.Traceparent)
 			}
 			b.fanout(ev)
 		}

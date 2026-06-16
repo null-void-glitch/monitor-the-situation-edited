@@ -30,7 +30,7 @@ type Repository interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -165,7 +165,7 @@ func (c *Collector) handleConn(ctx context.Context, conn *Conn) error {
 						}
 					}
 					if c.shouldEmit(tick.Symbol) {
-						c.emitTick(tick)
+						c.emitTick(hctx, tick)
 						count++
 					}
 				}
@@ -219,7 +219,7 @@ type tickPayload struct {
 	ChangePct1h *float64        `json:"change_pct_1h,omitempty"`
 }
 
-func (c *Collector) emitTick(t Tick) {
+func (c *Collector) emitTick(ctx context.Context, t Tick) {
 	c.recordPrice(t.Symbol, t.TS, t.Price)
 	payload := tickPayload{
 		Symbol:    t.Symbol,
@@ -231,7 +231,7 @@ func (c *Collector) emitTick(t Tick) {
 		payload.ChangePct1h = &pct
 	}
 	body, _ := json.Marshal(payload)
-	c.cfg.Emitter.Emit(events.Event{
+	c.cfg.Emitter.Emit(ctx, events.Event{
 		Topic:     events.TopicCoinbasePrice,
 		Timestamp: t.TS,
 		Source:    Name,

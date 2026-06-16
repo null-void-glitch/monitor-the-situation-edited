@@ -20,7 +20,7 @@ type collectingEmitter struct {
 	events []events.Event
 }
 
-func (c *collectingEmitter) Emit(ev events.Event) {
+func (c *collectingEmitter) Emit(ctx context.Context, ev events.Event) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.events = append(c.events, ev)

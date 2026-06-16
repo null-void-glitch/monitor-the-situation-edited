@@ -25,6 +25,9 @@ type DShieldEnrichment struct {
 	Country        string
 	Classification string
 	Actor          string
+	IsTor          bool
+	Lat            *float64
+	Lng            *float64
 }
 
 type Enricher interface {
@@ -41,7 +44,7 @@ type Persister interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -132,7 +135,7 @@ func (c *Collector) tick(ctx context.Context) {
 		return
 	}
 
-	c.cfg.Emitter.Emit(events.Event{
+	c.cfg.Emitter.Emit(ctx, events.Event{
 		Topic:     events.TopicScanFirehose,
 		Timestamp: now,
 		Source:    Name,
@@ -164,6 +167,9 @@ func (c *Collector) enrichSources(
 			e.Country = info.Country
 			e.Classification = info.Classification
 			e.Actor = info.Actor
+			e.IsTor = info.IsTor
+			e.Lat = info.Lat
+			e.Lng = info.Lng
 		}
 		enriched = append(enriched, e)
 	}

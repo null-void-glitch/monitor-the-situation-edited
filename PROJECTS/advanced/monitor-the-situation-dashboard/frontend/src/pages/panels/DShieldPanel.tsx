@@ -133,6 +133,7 @@ function fmtN(n: number): string {
 }
 
 function renderTag(s: DShieldSource): string {
+  if (s.is_tor) return 'TOR EXIT'
   if (s.actor && s.actor.length > 0) return s.actor.toUpperCase()
   if (s.classification && s.classification.length > 0) {
     return s.classification.toUpperCase()
@@ -141,6 +142,7 @@ function renderTag(s: DShieldSource): string {
 }
 
 function tagClass(s: DShieldSource): string {
+  if (s.is_tor) return `${styles.tag} ${styles.tagTor}`
   const c = (s.classification ?? '').toLowerCase()
   if (c === 'malicious') return `${styles.tag} ${styles.tagMalicious}`
   if (c === 'benign') return `${styles.tag} ${styles.tagBenign}`

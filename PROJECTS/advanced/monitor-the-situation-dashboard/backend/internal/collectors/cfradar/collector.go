@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -18,7 +19,7 @@ import (
 const (
 	Name                       = "cfradar"
 	defaultCollectorInterval   = 5 * time.Minute
-	defaultCollectorConfidence = 7
+	defaultCollectorConfidence = 4
 )
 
 type Fetcher interface {
@@ -34,7 +35,7 @@ type Repository interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -156,8 +157,8 @@ func (c *Collector) tickOutages(ctx context.Context) (int64, error) {
 		raw := json.RawMessage(rawBytes)
 		row := OutageRow{
 			ID:         a.ID,
-			StartedAt:  a.StartDate,
-			EndedAt:    a.EndDate,
+			StartedAt:  parseCFTime(a.StartDate),
+			EndedAt:    parseCFTimePtr(a.EndDate),
 			Locations:  pq.StringArray(a.Locations),
 			ASNs:       pq.Int32Array(a.ASNs),
 			Cause:      a.Reason,
@@ -168,7 +169,7 @@ func (c *Collector) tickOutages(ctx context.Context) (int64, error) {
 			c.logger.Warn("upsert outage", "id", a.ID, "err", uerr)
 			continue
 		}
-		c.cfg.Emitter.Emit(events.Event{
+		c.cfg.Emitter.Emit(ctx, events.Event{
 			Topic:     events.TopicInternetOutage,
 			Timestamp: now,
 			Source:    Name,
@@ -218,8 +219,8 @@ func (c *Collector) tickHijacks(ctx context.Context) (int64, error) {
 		raw := json.RawMessage(rawBytes)
 		row := HijackRow{
 			ID:          e.ID,
-			DetectedAt:  e.DetectedAt,
-			StartedAt:   e.StartedAt,
+			DetectedAt:  parseCFTime(e.DetectedAt),
+			StartedAt:   parseCFTime(e.StartedAt),
 			DurationSec: e.DurationSec,
 			Confidence:  e.Confidence,
 			HijackerASN: e.HijackerASN,
@@ -231,7 +232,7 @@ func (c *Collector) tickHijacks(ctx context.Context) (int64, error) {
 			c.logger.Warn("upsert hijack", "id", e.ID, "err", uerr)
 			continue
 		}
-		c.cfg.Emitter.Emit(events.Event{
+		c.cfg.Emitter.Emit(ctx, events.Event{
 			Topic:     events.TopicBGPHijack,
 			Timestamp: now,
 			Source:    Name,
@@ -248,4 +249,23 @@ func representativeIP(cidr string) (string, bool) {
 		return "", false
 	}
 	return p.Addr().String(), true
+}
+
+func parseCFTime(s string) time.Time {
+	if s == "" {
+		return time.Time{}
+	}
+	if !strings.HasSuffix(s, "Z") && !strings.Contains(s, "+") && !strings.Contains(s, "-") {
+		s += "Z"
+	}
+	t, _ := time.Parse(time.RFC3339Nano, s)
+	return t
+}
+
+func parseCFTimePtr(s *string) *time.Time {
+	if s == nil || *s == "" {
+		return nil
+	}
+	t := parseCFTime(*s)
+	return &t
 }

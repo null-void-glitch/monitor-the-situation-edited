@@ -41,6 +41,13 @@ const SOURCES: readonly SourceSpec[] = [
     hint: 'Coinbase WS · real-time',
   },
   {
+    key: 'yahoo',
+    label: 'YAHOO',
+    staleAfterMs: 300_000,
+    batch: true,
+    hint: 'Yahoo Finance · polls every 1m',
+  },
+  {
     key: 'iss',
     label: 'ISS',
     staleAfterMs: 60_000,

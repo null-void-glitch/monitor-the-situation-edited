@@ -1,3 +1,17 @@
+
+<p align="center">
+  <img src="https://github.com/null-void-glitch/monitor-the-situation-edited/blob/main/Screenshot_20260616_215433.png">
+</p>
+
+
+Edited version of the below project by Carter Perez.
+
+Added some of the functionality he suggested in his Write-Ups as well as some other additions, either intelligence sources or QoL additions.
+
+Please visit the original repos from Carter as they are an incredible source of information and learning for all things cyber-security.
+
+######################################################################################################################################################
+
 <!--
 ©AngelaMos | 2026
 README.md

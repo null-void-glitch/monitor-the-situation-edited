@@ -11,6 +11,9 @@ export const ransomwareVictimSchema = z.object({
   activity: z.string().optional(),
   website: z.string().optional(),
   description: z.string().optional(),
+  wallet_address: z.string().optional(),
+  wallet_txs: z.array(z.number()).optional(),
+  techniques: z.array(z.string()).optional(),
 })
 
 export type RansomwareVictim = z.infer<typeof ransomwareVictimSchema>
@@ -33,6 +36,9 @@ export const dshieldSourceSchema = z.object({
   country: z.string().optional(),
   classification: z.string().optional(),
   actor: z.string().optional(),
+  is_tor: z.boolean().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 })
 
 export type DShieldSource = z.infer<typeof dshieldSourceSchema>
@@ -80,12 +86,12 @@ const bgpHijackEnrichmentSchema = z.object({
 
 export const bgpHijackSchema = z.object({
   id: z.number(),
-  detectedAt: z.string().optional(),
-  startedAt: z.string().optional(),
+  max_msg_ts: z.string().optional(),
+  min_hijack_ts: z.string().optional(),
   duration: z.number().optional(),
-  confidenceScore: z.number().optional(),
-  hijackerAsn: z.number().optional(),
-  victimAsns: z.array(z.number()).nullable().optional(),
+  confidence_score: z.number().optional(),
+  hijacker_asn: z.number().optional(),
+  victim_asns: z.array(z.number()).nullable().optional(),
   prefixes: z.array(z.string()).optional(),
   enrichment: bgpHijackEnrichmentSchema.optional(),
 })

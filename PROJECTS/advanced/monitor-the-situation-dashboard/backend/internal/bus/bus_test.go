@@ -67,7 +67,7 @@ func TestBus_EmitFlowsThroughDispatcher(t *testing.T) {
 	go func() { done <- b.Run(ctx) }()
 
 	now := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
-	b.Emit(events.Event{
+	b.Emit(context.Background(), events.Event{
 		Topic:     events.TopicHeartbeat,
 		Timestamp: now,
 		Source:    "heartbeat",
@@ -93,7 +93,7 @@ func TestBus_DropOnFullBuffer(t *testing.T) {
 	})
 
 	for i := 0; i < 50; i++ {
-		b.Emit(events.Event{Topic: events.TopicHeartbeat, Source: "stress"})
+		b.Emit(context.Background(), events.Event{Topic: events.TopicHeartbeat, Source: "stress"})
 	}
 	require.Positive(t, b.DroppedCount())
 }

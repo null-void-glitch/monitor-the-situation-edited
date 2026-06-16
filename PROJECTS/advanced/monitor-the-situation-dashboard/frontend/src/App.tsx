@@ -2,14 +2,17 @@
 // App.tsx
 
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
 import { RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
 
 import { queryClient } from '@/core/api'
 import { router } from '@/core/app/routers'
+import { useUIStore } from '@/stores/ui'
 
 export default function App(): React.ReactElement {
+  const devtoolsOpen = useUIStore((s) => s.devtoolsOpen)
+
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
@@ -28,7 +31,11 @@ export default function App(): React.ReactElement {
           },
         }}
       />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {devtoolsOpen && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 99999, height: '50vh', background: 'var(--bg)', borderTop: '1px solid var(--fg-4)' }}>
+          <ReactQueryDevtoolsPanel onClose={() => useUIStore.getState().setDevtoolsOpen(false)} />
+        </div>
+      )}
     </QueryClientProvider>
   )
 }

@@ -19,12 +19,12 @@
   gap: 48px;
   white-space: nowrap;
   will-change: transform;
-  animation: ticker-right 60s linear infinite;
+  animation: ticker-left 60s linear infinite;
 }
 
-@keyframes ticker-right {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(100vw); }
+@keyframes ticker-left {
+  from { transform: translateX(100vw); }
+  to   { transform: translateX(-100%); }
 }
 
 .item {

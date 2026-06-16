@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 )
 
 var ErrSequenceGap = errors.New("coinbase: sequence gap detected")
@@ -23,7 +24,11 @@ func ReadLoop(
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		frame, err := conn.ReadFrame(ctx)
+		
+		readCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		frame, err := conn.ReadFrame(readCtx)
+		cancel()
+		
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()

@@ -29,7 +29,7 @@ type TLEStorer interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -96,7 +96,7 @@ func (c *Collector) tickPosition(ctx context.Context) {
 		return
 	}
 	body, _ := json.Marshal(p)
-	c.cfg.Emitter.Emit(events.Event{
+	c.cfg.Emitter.Emit(ctx, events.Event{
 		Topic:     events.TopicISSPosition,
 		Timestamp: p.FetchedAt,
 		Source:    Name,

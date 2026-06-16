@@ -66,7 +66,7 @@ type fakeEmitter struct {
 	events []events.Event
 }
 
-func (e *fakeEmitter) Emit(ev events.Event) {
+func (e *fakeEmitter) Emit(ctx context.Context, ev events.Event) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.events = append(e.events, ev)

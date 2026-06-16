@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import {
+  FiDatabase,
   FiHelpCircle,
   FiMaximize2,
   FiMinimize2,
@@ -14,6 +15,7 @@ import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/config'
 import { useAuthStore } from '@/core/lib/auth.store'
 import { useUIStore } from '@/stores/ui'
+import { DashboardControls } from './DashboardControls'
 import styles from './TopStrip.module.scss'
 
 const CIA_AUDIO_SRC = '/chip-in-my-brain.mp3'
@@ -34,6 +36,7 @@ export function TopStrip(): React.ReactElement | null {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const openAbout = useUIStore((s) => s.openAbout)
   const isPresentation = useUIStore((s) => s.presentationMode)
+  const toggleDevtools = useUIStore((s) => s.toggleDevtools)
   const navigate = useNavigate()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showPWAHint, setShowPWAHint] = useState(false)
@@ -137,6 +140,16 @@ export function TopStrip(): React.ReactElement | null {
             </div>
           )}
         </div>
+        <DashboardControls />
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={toggleDevtools}
+          aria-label="Toggle TanStack Query Devtools"
+          title="TanStack Query Devtools"
+        >
+          <FiDatabase aria-hidden />
+        </button>
         {isAuthenticated ? (
           <button
             type="button"

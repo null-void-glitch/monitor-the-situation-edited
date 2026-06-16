@@ -44,6 +44,7 @@ export const API_ENDPOINTS = {
     OUTAGES: `/${API_VERSION}/intel/outages`,
     RANSOMWARE: `/${API_VERSION}/intel/ransomware`,
     QUAKES: `/${API_VERSION}/intel/quakes`,
+    FINANCE: `/${API_VERSION}/intel/finance`,
   },
 } as const
 

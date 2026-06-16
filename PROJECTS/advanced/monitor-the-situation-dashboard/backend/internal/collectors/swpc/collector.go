@@ -45,7 +45,7 @@ type Ring interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -143,7 +143,7 @@ func (c *Collector) tickFast(ctx context.Context) {
 	}
 
 	if pushed > 0 {
-		c.emitCombined(pushed)
+		c.emitCombined(ctx, pushed)
 	}
 
 	if !hadError {
@@ -159,13 +159,13 @@ func (c *Collector) tickSlow(ctx context.Context) {
 		return
 	}
 	if n > 0 {
-		c.emitCombined(n)
+		c.emitCombined(ctx, n)
 	}
 }
 
-func (c *Collector) emitCombined(pushed int64) {
+func (c *Collector) emitCombined(ctx context.Context, pushed int64) {
 	body, _ := json.Marshal(c.buildPayload(pushed))
-	c.cfg.Emitter.Emit(events.Event{
+	c.cfg.Emitter.Emit(ctx, events.Event{
 		Topic:     events.TopicSpaceWeather,
 		Timestamp: time.Now().UTC(),
 		Source:    Name,

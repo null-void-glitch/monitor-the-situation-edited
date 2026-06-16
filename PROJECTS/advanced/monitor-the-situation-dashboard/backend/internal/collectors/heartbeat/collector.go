@@ -13,7 +13,7 @@ import (
 const defaultInterval = 5 * time.Second
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type Config struct {
@@ -38,21 +38,21 @@ func (c *Collector) Run(ctx context.Context) error {
 	ticker := time.NewTicker(c.cfg.Interval)
 	defer ticker.Stop()
 
-	c.emitNow()
+	c.emitNow(ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			c.emitNow()
+			c.emitNow(ctx)
 		}
 	}
 }
 
-func (c *Collector) emitNow() {
+func (c *Collector) emitNow(ctx context.Context) {
 	now := time.Now().UTC()
-	c.cfg.Emitter.Emit(events.Event{
+	c.cfg.Emitter.Emit(ctx, events.Event{
 		Topic:     events.TopicHeartbeat,
 		Timestamp: now,
 		Source:    c.Name(),

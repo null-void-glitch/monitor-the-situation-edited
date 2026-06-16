@@ -17,6 +17,8 @@ export type SourceKey =
   | 'eth'
   | 'wiki'
   | 'ws'
+  | 'rss'
+  | 'yahoo'
 
 interface FreshnessStore {
   ts: Partial<Record<SourceKey, number>>

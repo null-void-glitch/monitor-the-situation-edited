@@ -76,9 +76,33 @@ export function RansomwarePanel(): React.ReactElement {
             return (
               <tr key={key} className={isFlashing ? styles.flash : undefined}>
                 <td className={styles.victim} title={v.post_title}>
-                  {v.post_title}
+                  <div className={styles.victimTitle}>{v.post_title}</div>
+                  {v.wallet_txs && v.wallet_txs.length > 0 && (
+                    <div className={styles.sparklineWrap} title={`Wallet: ${v.wallet_address}`}>
+                      <span className={styles.walletIcon}>₿</span>
+                      <Sparkline data={v.wallet_txs} />
+                    </div>
+                  )}
                 </td>
-                <td className={styles.group}>{v.group_name}</td>
+                <td className={styles.group}>
+                  <span className={styles.groupName}>{v.group_name}</span>
+                  {v.techniques && v.techniques.length > 0 && (
+                    <div className={styles.techniques}>
+                      {v.techniques.map(t => (
+                        <a 
+                          key={t} 
+                          href={`https://attack.mitre.org/techniques/${t}/`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.techBadge} 
+                          title={`MITRE ATT&CK Technique: ${t}`}
+                        >
+                          {t}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className={styles.cc}>{v.country ?? '—'}</td>
                 <td className={styles.ago}>{fmtAgo(v.discovered, now)}</td>
               </tr>
@@ -103,4 +127,31 @@ function fmtAgo(iso: string, now: number): string {
     return `${Math.floor(diff / MS_PER_HOUR)}h`
   }
   return `${Math.floor(diff / (HOURS_PER_DAY * MS_PER_HOUR))}d`
+}
+
+function Sparkline({ data }: { data: number[] }) {
+  if (!data || data.length === 0) return null
+  const max = Math.max(...data, 1)
+  const width = 40
+  const height = 10
+  
+  if (data.length === 1) {
+    return (
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+        <line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke="var(--amber)" strokeWidth="1" />
+      </svg>
+    )
+  }
+
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width
+    const y = height - (v / max) * height
+    return `${x},${y}`
+  }).join(' ')
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+      <polyline points={points} fill="none" stroke="var(--amber)" strokeWidth="1" />
+    </svg>
+  )
 }

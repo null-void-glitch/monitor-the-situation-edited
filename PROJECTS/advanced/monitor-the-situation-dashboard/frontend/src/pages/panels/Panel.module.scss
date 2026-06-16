@@ -95,6 +95,48 @@
   min-height: 0;
 }
 
+// ── Customize-mode chrome (drag / collapse / hide) ────────────
+
+.chrome {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chromeBtn,
+.dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: 0;
+  color: var(--fg-3);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--fg-1);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--fg-2);
+    outline-offset: 1px;
+  }
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none; // let the pointer sensor own the gesture on touch
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.collapsed .head {
+  border-bottom: 0;
+}
+
 .accentBgp        { &::before { background: var(--accent-bgp); } }
 .accentOutage     { &::before { background: var(--accent-outage); } }
 .accentKev        { &::before { background: var(--accent-kev); } }

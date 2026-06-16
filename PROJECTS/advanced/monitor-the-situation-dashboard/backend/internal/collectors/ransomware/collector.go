@@ -5,12 +5,57 @@ package ransomware
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"log/slog"
+	"os"
+	"strings"
+	"sync"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/carterperez-dev/monitor-the-situation/backend/internal/events"
 )
+
+//go:embed actor_tactics.yaml
+var actorTacticsRaw []byte
+
+var actorTactics map[string][]string
+
+var unmappedActors map[string]bool
+var unmappedMu sync.Mutex
+
+func init() {
+	actorTactics = make(map[string][]string)
+	if err := yaml.Unmarshal(actorTacticsRaw, &actorTactics); err != nil {
+		panic(err)
+	}
+	unmappedActors = make(map[string]bool)
+}
+
+func GetTactics(actor string) ([]string, bool) {
+	techs, ok := actorTactics[strings.ToLower(actor)]
+	return techs, ok
+}
+
+func logUnmappedActor(actor string, logger *slog.Logger) {
+	actorLower := strings.ToLower(actor)
+	unmappedMu.Lock()
+	defer unmappedMu.Unlock()
+	if unmappedActors[actorLower] {
+		return
+	}
+	unmappedActors[actorLower] = true
+
+	f, err := os.OpenFile("unmapped_actors.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		defer f.Close()
+		f.WriteString(actor + "\n")
+	} else {
+		logger.Error("failed to write to unmapped_actors.txt", "err", err)
+	}
+}
 
 const (
 	Name                 = "ransomware"
@@ -27,7 +72,7 @@ type Repository interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -39,9 +84,10 @@ type CollectorConfig struct {
 	Interval time.Duration
 	Fetcher  Fetcher
 	Repo     Repository
-	Emitter  Emitter
-	State    StateRecorder
-	Logger   *slog.Logger
+	Emitter    Emitter
+	State      StateRecorder
+	BtcTracker *BitcoinTracker
+	Logger     *slog.Logger
 }
 
 type Collector struct {
@@ -105,7 +151,32 @@ func (c *Collector) tick(ctx context.Context) {
 			continue
 		}
 
-		raw, _ := json.Marshal(v)
+		techs, ok := actorTactics[strings.ToLower(v.GroupName)]
+		if ok {
+			v.Techniques = techs
+		} else {
+			c.logger.Warn("unmapped ransomware actor", "actor", v.GroupName)
+			logUnmappedActor(v.GroupName, c.logger)
+		}
+
+		var raw []byte
+		if c.cfg.BtcTracker != nil {
+			type EnrichedVictim struct {
+				Victim
+				WalletAddress string  `json:"wallet_address,omitempty"`
+				WalletTxs     []int64 `json:"wallet_txs,omitempty"`
+			}
+			addr, txs := c.cfg.BtcTracker.FindAndTrack(ctx, v.Description)
+			enriched := EnrichedVictim{
+				Victim:        v,
+				WalletAddress: addr,
+				WalletTxs:     txs,
+			}
+			raw, _ = json.Marshal(enriched)
+		} else {
+			raw, _ = json.Marshal(v)
+		}
+
 		row := Row{
 			ID:           id,
 			PostTitle:    v.PostTitle,
@@ -121,7 +192,7 @@ func (c *Collector) tick(ctx context.Context) {
 			continue
 		}
 
-		c.cfg.Emitter.Emit(events.Event{
+		c.cfg.Emitter.Emit(ctx, events.Event{
 			Topic:     events.TopicRansomwareVictim,
 			Timestamp: now,
 			Source:    Name,

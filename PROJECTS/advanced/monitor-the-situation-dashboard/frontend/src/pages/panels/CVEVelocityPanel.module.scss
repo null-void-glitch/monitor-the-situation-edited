@@ -49,6 +49,21 @@
 .cveId {
   font-family: var(--font-mono);
   width: 38%;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+      color: var(--fg-1);
+    }
+
+    &:focus-visible {
+      outline: 1px solid var(--fg-2);
+      outline-offset: 1px;
+    }
+  }
 }
 
 .severity {

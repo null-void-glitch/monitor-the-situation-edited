@@ -63,9 +63,9 @@ type OutageResultBody struct {
 }
 
 type OutageAnnotation struct {
-	ID         string     `json:"id"`
-	StartDate  time.Time  `json:"startDate"`
-	EndDate    *time.Time `json:"endDate"`
+	ID         string   `json:"id"`
+	StartDate  string   `json:"startDate"`
+	EndDate    *string  `json:"endDate"`
 	Locations  []string   `json:"locations"`
 	ASNs       []int32    `json:"asns"`
 	Reason     string     `json:"reason"`
@@ -84,12 +84,12 @@ type HijackBody struct {
 
 type HijackEvent struct {
 	ID          int64     `json:"id"`
-	DetectedAt  time.Time `json:"detectedAt"`
-	StartedAt   time.Time `json:"startedAt"`
+	DetectedAt  string    `json:"max_msg_ts"`
+	StartedAt   string    `json:"min_hijack_ts"`
 	DurationSec int32     `json:"duration"`
-	Confidence  int16     `json:"confidenceScore"`
-	HijackerASN int32     `json:"hijackerAsn"`
-	VictimASNs  []int32   `json:"victimAsns"`
+	Confidence  int16     `json:"confidence_score"`
+	HijackerASN int32     `json:"hijacker_asn"`
+	VictimASNs  []int32   `json:"victim_asns"`
 	Prefixes    []string  `json:"prefixes"`
 }
 

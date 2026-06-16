@@ -17,5 +17,8 @@ type EnrichedSource struct {
 	Targets        int    `json:"targets"`
 	Country        string `json:"country,omitempty"`
 	Classification string `json:"classification,omitempty"`
-	Actor          string `json:"actor,omitempty"`
+	Actor          string   `json:"actor,omitempty"`
+	IsTor          bool     `json:"is_tor,omitempty"`
+	Lat            *float64 `json:"lat,omitempty"`
+	Lng            *float64 `json:"lng,omitempty"`
 }

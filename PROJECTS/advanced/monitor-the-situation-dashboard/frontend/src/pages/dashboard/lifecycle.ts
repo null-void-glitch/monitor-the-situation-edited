@@ -23,9 +23,13 @@ import {
   isValidKevEntry,
   isValidRansomwareVictim,
   isValidWikiItn,
+  isValidWikiItnList,
   type KevEntry,
   type RansomwareVictim,
   type WikiItn,
+  isValidRssFeed,
+  isValidRssFeedList,
+  type RssFeed,
 } from '@/api/types'
 import { browserDriver, createDashboardWS, type WSEvent } from '@/api/ws'
 import { unlockOnFirstGesture } from '@/lib/audio'
@@ -56,6 +60,7 @@ const ALL_TOPICS: readonly string[] = [
   'wiki_itn',
   'gdelt_spike',
   'iss_position',
+  'rss_feed',
 ]
 
 const WS_URL = '/api/v1/ws'
@@ -164,6 +169,18 @@ function dispatchEvent(
       if (isValidWikiItn(data)) {
         handleWiki(data)
         ping('wiki')
+      } else if (isValidWikiItnList(data)) {
+        data.forEach(handleWiki)
+        ping('wiki')
+      }
+      break
+    case 'rss_feed':
+      if (isValidRssFeed(data)) {
+        handleRss(data)
+        ping('rss')
+      } else if (isValidRssFeedList(data)) {
+        data.forEach(handleRss)
+        ping('rss')
       }
       break
     case 'gdelt_spike':
@@ -226,17 +243,17 @@ function handleRansomware(p: RansomwareVictim): void {
   })
 }
 
-function pushRansomwarePoint(p: RansomwareVictim): void {
+export function pushRansomwarePoint(p: RansomwareVictim): void {
   if (!p.country) return
   const c = getCentroid(p.country)
   if (!c) return
   useGlobeEvents.getState().pushPoint({
     id: `rw-${victimKey(p)}`,
     type: 'ransomware',
-    lat: c.lat,
-    lng: c.lng,
+    lat: c.lat + (Math.random() - 0.5) * 5,
+    lng: c.lng + (Math.random() - 0.5) * 5,
     emittedAt: Date.now(),
-    meta: { group_name: p.group_name, post_title: p.post_title },
+    meta: { group_name: p.group_name, post_title: p.post_title, country: p.country },
   })
 }
 
@@ -255,10 +272,15 @@ function pushOutagePoints(p: InternetOutage): void {
     useGlobeEvents.getState().pushPoint({
       id: `outage-${p.id}-${loc}`,
       type: 'outage',
-      lat: c.lat,
-      lng: c.lng,
+      lat: c.lat + (Math.random() - 0.5) * 5,
+      lng: c.lng + (Math.random() - 0.5) * 5,
       emittedAt: now,
-      meta: { reason: p.reason, type: p.outageType },
+      meta: { 
+        reason: p.reason, 
+        type: p.outageType, 
+        country: loc,
+        asnsCount: p.asns?.length ?? 0 
+      },
     })
   }
 }
@@ -267,30 +289,37 @@ function handleHijack(p: BgpHijack, queryClient: QueryClient): void {
   useBgpHijackStore.getState().push(p)
   pushHijackPoint(p)
   mergeIntoSnapshot(queryClient, 'bgp_hijack', p)
-  const n = p.prefixes?.length ?? 0
-  useTicker.getState().push({
-    id: `bgp-tick-${p.id}`,
-    source: 'BGP',
-    headline: `ASN ${p.hijackerAsn || '?'} · ${n} prefix${n !== 1 ? 'es' : ''} hijacked`,
-    ts: Date.now(),
-  })
+  if (!p.duration || p.duration === 0) {
+    const n = p.prefixes?.length ?? 0
+    useTicker.getState().push({
+      id: `bgp-tick-${p.id}`,
+      source: 'BGP',
+      headline: `ASN ${p.hijacker_asn || '?'} · ${n} prefix${n !== 1 ? 'es' : ''} hijacked`,
+      ts: Date.now(),
+    })
+  }
 }
 
-function pushHijackPoint(p: BgpHijack): void {
+export function pushHijackPoint(p: BgpHijack): void {
   const country = p.enrichment?.country
   if (!country) return
+  if ((p.confidence_score ?? 0) < 8) return
+  if (p.duration && p.duration > 0) return
+
   const c = getCentroid(country)
   if (!c) return
   useGlobeEvents.getState().pushPoint({
     id: `hijack-${p.id}`,
     type: 'hijack',
-    lat: c.lat,
-    lng: c.lng,
+    lat: c.lat + (Math.random() - 0.5) * 5,
+    lng: c.lng + (Math.random() - 0.5) * 5,
     emittedAt: Date.now(),
     meta: {
-      asn: p.hijackerAsn,
+      asn: p.hijacker_asn,
       isp: p.enrichment?.isp,
       prefixes: p.prefixes?.length,
+      country: country,
+      confidenceScore: p.confidence_score,
     },
   })
 }
@@ -303,16 +332,29 @@ function handleScanFirehose(p: DShieldData, queryClient: QueryClient): void {
 function pushScanPoints(p: DShieldData): void {
   const now = Date.now()
   for (const src of p.topips ?? []) {
-    if (!src.country) continue
-    const c = getCentroid(src.country)
-    if (!c) continue
+    let lat: number | undefined
+    let lng: number | undefined
+
+    if (src.lat !== undefined && src.lng !== undefined) {
+      lat = src.lat + (Math.random() - 0.5) * 0.5
+      lng = src.lng + (Math.random() - 0.5) * 0.5
+    } else if (src.country) {
+      const c = getCentroid(src.country)
+      if (c) {
+        lat = c.lat + (Math.random() - 0.5) * 5
+        lng = c.lng + (Math.random() - 0.5) * 5
+      }
+    }
+
+    if (lat === undefined || lng === undefined) continue
+
     useGlobeEvents.getState().pushPoint({
       id: `scan-${src.source}`,
       type: 'scan',
-      lat: c.lat,
-      lng: c.lng,
+      lat,
+      lng,
       emittedAt: now,
-      meta: { source: src.source, reports: src.reports },
+      meta: { source: src.source, reports: src.reports, targets: src.targets, country: src.country },
     })
   }
 }
@@ -355,7 +397,8 @@ function handleEarthquake(p: EarthquakePayload): void {
   if (!Array.isArray(coords)) return
   const lng = coords[0]
   const lat = coords[1]
-  if (typeof lat !== 'number' || typeof lng !== 'number') return
+  const mag = p.properties?.mag ?? 0
+  if (typeof lat !== 'number' || typeof lng !== 'number' || mag <= 4.5) return
   const now = Date.now()
   useGlobeEvents.getState().pushPoint({
     id: `eq-${p.id}`,
@@ -397,6 +440,16 @@ function handleWiki(p: WikiItn): void {
   })
 }
 
+function handleRss(p: RssFeed): void {
+  useTicker.getState().push({
+    id: `rss-${p.link}`,
+    source: p.source,
+    headline: p.title,
+    ts: p.published ? new Date(p.published).getTime() : Date.now(),
+    href: p.link,
+  })
+}
+
 function handleGdelt(p: GdeltSpike): void {
   useTicker.getState().push({
     id: `gdelt-${p.theme}-${p.time}`,
@@ -425,7 +478,8 @@ function seedGlobeFromSnapshot(snap: Snapshot): void {
     if (Array.isArray(coords)) {
       const lng = coords[0]
       const lat = coords[1]
-      if (typeof lat === 'number' && typeof lng === 'number') {
+      const mag = eq.properties?.mag ?? 0
+      if (typeof lat === 'number' && typeof lng === 'number' && mag > 4.5) {
         useGlobeEvents.getState().pushPoint({
           id: `eq-${eq.id}`,
           type: 'earthquake',
@@ -470,13 +524,15 @@ function seedGlobeFromSnapshot(snap: Snapshot): void {
   if (isValidBgpHijack(hijack)) {
     useBgpHijackStore.getState().push(hijack)
     pushHijackPoint(hijack)
-    const n = hijack.prefixes?.length ?? 0
-    useTicker.getState().push({
-      id: `bgp-tick-${hijack.id}`,
-      source: 'BGP',
-      headline: `ASN ${hijack.hijackerAsn || '?'} · ${n} prefix${n !== 1 ? 'es' : ''} hijacked`,
-      ts: Date.now(),
-    })
+    if (!hijack.duration || hijack.duration === 0) {
+      const n = hijack.prefixes?.length ?? 0
+      useTicker.getState().push({
+        id: `bgp-tick-${hijack.id}`,
+        source: 'BGP',
+        headline: `ASN ${hijack.hijacker_asn || '?'} · ${n} prefix${n !== 1 ? 'es' : ''} hijacked`,
+        ts: Date.now(),
+      })
+    }
   }
 
   const scan = snap.scan_firehose
@@ -484,12 +540,15 @@ function seedGlobeFromSnapshot(snap: Snapshot): void {
 
   const wiki = snap.wiki_itn
   if (isValidWikiItn(wiki) && wiki.text) {
-    useTicker.getState().push({
-      id: `wiki-${wiki.slug || wiki.text}`,
-      source: 'Wikipedia',
-      headline: wiki.text,
-      ts: Date.now(),
-      href: wiki.slug ? `https://en.wikipedia.org/wiki/${wiki.slug}` : undefined,
-    })
+    handleWiki(wiki)
+  } else if (isValidWikiItnList(wiki)) {
+    wiki.forEach(handleWiki)
+  }
+
+  const rss = snap.rss_feed
+  if (isValidRssFeed(rss)) {
+    handleRss(rss)
+  } else if (isValidRssFeedList(rss)) {
+    rss.forEach(handleRss)
   }
 }

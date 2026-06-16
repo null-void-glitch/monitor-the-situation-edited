@@ -221,6 +221,7 @@ export const COUNTRY_CENTROIDS: Record<string, Centroid> = {
 
 export function getCentroid(iso2: string): Centroid | null {
   if (!iso2) return null
-  const code = ISO_ALIASES[iso2] ?? iso2
+  const upperIso = iso2.toUpperCase()
+  const code = ISO_ALIASES[upperIso] ?? upperIso
   return COUNTRY_CENTROIDS[code] ?? SUPPLEMENTARY_CENTROIDS[code] ?? null
 }

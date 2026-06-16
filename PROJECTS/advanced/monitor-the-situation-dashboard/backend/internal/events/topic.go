@@ -22,6 +22,7 @@ const (
 	TopicGDELTSpike       Topic = "gdelt_spike"
 	TopicISSPosition      Topic = "iss_position"
 	TopicCollectorState   Topic = "collector_state"
+	TopicRSSFeed          Topic = "rss_feed"
 )
 
 func (t Topic) String() string { return string(t) }
@@ -32,7 +33,7 @@ func (t Topic) IsValid() bool {
 		TopicCVENew, TopicCVEUpdated, TopicEPSS, TopicKEVAdded,
 		TopicRansomwareVictim, TopicCoinbasePrice, TopicEarthquake,
 		TopicSpaceWeather, TopicWikipediaITN, TopicGDELTSpike,
-		TopicISSPosition, TopicCollectorState:
+		TopicISSPosition, TopicCollectorState, TopicRSSFeed:
 		return true
 	}
 	return false
@@ -56,5 +57,6 @@ func AllTopics() []Topic {
 		TopicGDELTSpike,
 		TopicISSPosition,
 		TopicCollectorState,
+		TopicRSSFeed,
 	}
 }

@@ -12,6 +12,7 @@ export interface WSDriver {
 export interface WSEvent {
   ch: string
   data?: unknown
+  traceparent?: string
   ts?: string
 }
 
@@ -74,6 +75,9 @@ export function createDashboardWS(opts: CreateDashboardWSOpts): DashboardWS {
         parsed = JSON.parse(data) as WSEvent
       } catch {
         return
+      }
+      if (parsed.traceparent) {
+        console.debug('Event received', parsed.ch, parsed.traceparent)
       }
       if (ready) {
         onEvent(parsed)

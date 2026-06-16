@@ -38,7 +38,7 @@ interface GlobeStore {
   focus: (p: GlobePoint | null) => void
 }
 
-const POINT_TTL_MS = 15 * 60 * 1000
+const POINT_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 const POINT_CAP = 500
 const RING_CAP = 200
 

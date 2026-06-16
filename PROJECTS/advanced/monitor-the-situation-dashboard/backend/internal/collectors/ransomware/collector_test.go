@@ -70,7 +70,7 @@ type stubRansomEmitter struct {
 	events []events.Event
 }
 
-func (e *stubRansomEmitter) Emit(ev events.Event) {
+func (e *stubRansomEmitter) Emit(ctx context.Context, ev events.Event) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.events = append(e.events, ev)

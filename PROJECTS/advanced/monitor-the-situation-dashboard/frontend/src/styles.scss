@@ -10,6 +10,7 @@
 @use 'styles/reset';
 @use 'styles/tokens' as *;
 @use 'styles/fonts' as *;
+@use 'styles/themes';
 
 // Ethos-aligned base for the dashboard surface. Auth pages override
 // with their own per-module styles (template residue — left alone).

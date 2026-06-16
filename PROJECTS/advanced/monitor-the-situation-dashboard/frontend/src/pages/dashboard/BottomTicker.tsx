@@ -10,7 +10,7 @@ const MS_PER_SECOND = 1_000
 const SECONDS_PER_MINUTE = 60
 const SECONDS_PER_HOUR = 3_600
 const COPY_COUNT = 3
-const TICKER_PX_PER_SECOND = 90
+const TICKER_PX_PER_SECOND = 40
 const MIN_DURATION_S = 30
 
 function measureDuration(el: HTMLDivElement): number {
@@ -42,7 +42,7 @@ export function BottomTicker(): React.ReactElement | null {
       ro.disconnect()
       window.removeEventListener('resize', update)
     }
-  }, [])
+  }, [items])
 
   if (isPresentation) return null
   if (items.length === 0) return <div className={styles.ticker} />

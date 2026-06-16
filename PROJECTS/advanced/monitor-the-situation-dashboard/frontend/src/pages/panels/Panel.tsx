@@ -2,7 +2,14 @@
 // Panel.tsx
 
 import type { ReactNode } from 'react'
-import { FiExternalLink } from 'react-icons/fi'
+import {
+  FiChevronDown,
+  FiChevronUp,
+  FiExternalLink,
+  FiMove,
+  FiX,
+} from 'react-icons/fi'
+import { usePanelChrome } from '@/pages/dashboard/panelChrome'
 import styles from './Panel.module.scss'
 import { StaleIndicator } from './shared/StaleIndicator'
 
@@ -30,6 +37,7 @@ export interface PanelProps {
   isStale?: boolean
   lastTickAt?: number
   batch?: boolean
+  headerAction?: ReactNode
   children: ReactNode
 }
 
@@ -43,8 +51,13 @@ export function Panel({
   isStale,
   lastTickAt,
   batch,
+  headerAction,
   children,
 }: PanelProps): React.ReactElement {
+  const chrome = usePanelChrome()
+  const customizing = chrome?.customizing ?? false
+  const collapsed = chrome?.collapsed ?? false
+
   const ACCENT_CLASS: Record<PanelAccent, string> = {
     bgp: styles.accentBgp,
     outage: styles.accentOutage,
@@ -60,7 +73,13 @@ export function Panel({
     eth: styles.accentEth,
   }
   const accentClass = accent ? ACCENT_CLASS[accent] : ''
-  const panelClass = [styles.panel, accentClass].filter(Boolean).join(' ')
+  const panelClass = [
+    styles.panel,
+    accentClass,
+    collapsed ? styles.collapsed : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <article className={panelClass}>
@@ -74,7 +93,8 @@ export function Panel({
         </span>
         <span className={styles.meta}>
           <StaleIndicator stale={isStale} lastTickAt={lastTickAt} batch={batch} />
-          {rawHref && (
+          {headerAction && !customizing && headerAction}
+          {rawHref && !customizing && (
             <a
               className={styles.rawLink}
               href={rawHref}
@@ -85,9 +105,42 @@ export function Panel({
               <FiExternalLink aria-hidden />
             </a>
           )}
+          {customizing && chrome && (
+            <span className={styles.chrome}>
+              <button
+                type="button"
+                className={styles.chromeBtn}
+                onClick={chrome.onToggleCollapse}
+                aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+              >
+                {collapsed ? (
+                  <FiChevronDown aria-hidden />
+                ) : (
+                  <FiChevronUp aria-hidden />
+                )}
+              </button>
+              <button
+                type="button"
+                className={styles.chromeBtn}
+                onClick={chrome.onHide}
+                aria-label="Hide panel"
+              >
+                <FiX aria-hidden />
+              </button>
+              <button
+                type="button"
+                className={styles.dragHandle}
+                aria-label="Drag to reorder"
+                {...chrome.dragAttributes}
+                {...chrome.dragListeners}
+              >
+                <FiMove aria-hidden />
+              </button>
+            </span>
+          )}
         </span>
       </header>
-      <div className={styles.body}>{children}</div>
+      {!collapsed && <div className={styles.body}>{children}</div>}
     </article>
   )
 }

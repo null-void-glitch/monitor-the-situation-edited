@@ -14,7 +14,7 @@ type Persister interface {
 }
 
 type Broadcaster interface {
-	Broadcast(topic string, payload []byte)
+	Broadcast(topic string, payload []byte, traceparent string)
 }
 
 type Broadcast struct {

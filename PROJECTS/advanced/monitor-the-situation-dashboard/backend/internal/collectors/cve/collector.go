@@ -39,7 +39,7 @@ type Repository interface {
 }
 
 type Emitter interface {
-	Emit(ev events.Event)
+	Emit(ctx context.Context, ev events.Event)
 }
 
 type StateRecorder interface {
@@ -146,7 +146,7 @@ func (c *Collector) tick(ctx context.Context) {
 			row.EPSSPercentile = &s.Percentile
 		}
 		body, _ := json.Marshal(row)
-		c.cfg.Emitter.Emit(events.Event{
+		c.cfg.Emitter.Emit(ctx, events.Event{
 			Topic:     events.TopicCVENew,
 			Timestamp: end,
 			Source:    Name,

@@ -6,6 +6,7 @@ package intel
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -94,6 +95,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/outages", h.recentOutages)
 		r.Get("/ransomware", h.recentRansomware)
 		r.Get("/quakes", h.recentQuakes)
+		r.Get("/finance", h.proxyYahooFinance)
 	})
 }
 
@@ -199,9 +201,19 @@ func (h *Handler) recentRansomware(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := make([]json.RawMessage, 0, len(rows))
-	for _, r := range rows {
-		if len(r.Payload) > 0 {
-			out = append(out, r.Payload)
+	for _, row := range rows {
+		if len(row.Payload) > 0 {
+			var payload map[string]any
+			if err := json.Unmarshal(row.Payload, &payload); err == nil {
+				if techs, ok := ransomware.GetTactics(row.GroupName); ok {
+					payload["techniques"] = techs
+				}
+				if enriched, err := json.Marshal(payload); err == nil {
+					out = append(out, enriched)
+					continue
+				}
+			}
+			out = append(out, row.Payload)
 		}
 	}
 	w.Header().Set("Cache-Control", cacheControl)
@@ -301,3 +313,41 @@ func intelKEVRows(rows []kev.Row) []kevDTO {
 // payload (the JSON the WS path emits), so the dashboard's panel-render
 // fields like prefixes/enrichment survive the cold-load → live-stream
 // transition without shape divergence.
+
+func (h *Handler) proxyYahooFinance(w http.ResponseWriter, r *http.Request) {
+	symbol := r.URL.Query().Get("symbol")
+	if symbol == "" {
+		core.BadRequest(w, "missing symbol")
+		return
+	}
+
+	req, err := http.NewRequestWithContext(r.Context(), "GET", "https://query2.finance.yahoo.com/v8/finance/chart/"+symbol+"?interval=1d&range=2d", nil)
+	if err != nil {
+		core.InternalServerError(w, err)
+		return
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		core.InternalServerError(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.Header().Set("Content-Type", "application/json")
+	// Add Cache-Control so clients don't hammer Yahoo
+	w.Header().Set("Cache-Control", "public, max-age=60")
+
+	for k, vv := range resp.Header {
+		if k == "Content-Type" || k == "Content-Length" {
+			for _, v := range vv {
+				w.Header().Add(k, v)
+			}
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	
+	// Copy body
+	_, _ = io.Copy(w, resp.Body)
+}

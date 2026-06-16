@@ -42,6 +42,25 @@ type CollectorsConfig struct {
 	Wikipedia  SourceConfig    `koanf:"wikipedia"`
 	GDELT      SourceConfig    `koanf:"gdelt"`
 	ISS        ISSConfig       `koanf:"iss"`
+	RSS        RSSConfig       `koanf:"rss"`
+	Tor        TorConfig       `koanf:"tor"`
+}
+
+type TorConfig struct {
+	Enabled  bool          `koanf:"enabled"`
+	Interval time.Duration `koanf:"interval"`
+	URL      string        `koanf:"url"`
+}
+
+type RSSConfig struct {
+	Enabled  bool            `koanf:"enabled"`
+	Interval time.Duration   `koanf:"interval"`
+	Feeds    []RSSFeedConfig `koanf:"feeds"`
+}
+
+type RSSFeedConfig struct {
+	Name string `koanf:"name"`
+	URL  string `koanf:"url"`
 }
 
 type SourceConfig struct {
@@ -317,6 +336,16 @@ func loadDefaults(k *koanf.Koanf) error {
 		"collectors.iss.enabled":            true,
 		"collectors.iss.position_interval":  "10s",
 		"collectors.iss.tle_interval":       "24h",
+		"collectors.rss.enabled":            true,
+		"collectors.rss.interval":           "5m",
+		"collectors.rss.feeds": []map[string]any{
+			{"name": "BleepingComputer", "url": "https://www.bleepingcomputer.com/feed/"},
+			{"name": "Reuters", "url": "https://rss.app/feeds/7KeRlbOD7PMp24RE.xml"},
+			{"name": "Google Project Zero", "url": "https://googleprojectzero.blogspot.com/feeds/posts/default"},
+		},
+		"collectors.tor.enabled":  true,
+		"collectors.tor.interval": "30m",
+		"collectors.tor.url":      "https://check.torproject.org/torbulkexitlist",
 	}
 
 	for key, value := range defaults {

@@ -20,6 +20,7 @@ export const wikiItnSchema = z.object({
   slug: z.string(),
   text: z.string(),
 })
+export const wikiItnListSchema = z.array(wikiItnSchema)
 
 export type WikiItn = z.infer<typeof wikiItnSchema>
 
@@ -31,6 +32,16 @@ export const gdeltSpikeSchema = z.object({
 })
 
 export type GdeltSpike = z.infer<typeof gdeltSpikeSchema>
+
+export const rssFeedSchema = z.object({
+  source: z.string(),
+  title: z.string(),
+  link: z.string(),
+  published: z.string(),
+})
+export const rssFeedListSchema = z.array(rssFeedSchema)
+
+export type RssFeed = z.infer<typeof rssFeedSchema>
 
 export const isValidSpaceWeatherData = (
   data: unknown
@@ -46,8 +57,22 @@ export const isValidWikiItn = (data: unknown): data is WikiItn => {
   return wikiItnSchema.safeParse(data).success
 }
 
+export const isValidWikiItnList = (data: unknown): data is WikiItn[] => {
+  return wikiItnListSchema.safeParse(data).success
+}
+
 export const isValidGdeltSpike = (data: unknown): data is GdeltSpike => {
   if (data === null || data === undefined || typeof data !== 'object')
     return false
   return gdeltSpikeSchema.safeParse(data).success
+}
+
+export const isValidRssFeed = (data: unknown): data is RssFeed => {
+  if (data === null || data === undefined || typeof data !== 'object')
+    return false
+  return rssFeedSchema.safeParse(data).success
+}
+
+export const isValidRssFeedList = (data: unknown): data is RssFeed[] => {
+  return rssFeedListSchema.safeParse(data).success
 }

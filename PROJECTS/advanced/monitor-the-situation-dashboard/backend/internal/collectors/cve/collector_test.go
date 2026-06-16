@@ -89,7 +89,7 @@ type stubCVEEmitter struct {
 	events []events.Event
 }
 
-func (e *stubCVEEmitter) Emit(ev events.Event) {
+func (e *stubCVEEmitter) Emit(ctx context.Context, ev events.Event) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.events = append(e.events, ev)
